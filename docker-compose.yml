@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  api:
+    image: langgenius/dify-api:latest
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/dify
+      - REDIS_URL=redis://redis:6379/0
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY_ID=minioadmin
+      - S3_SECRET_ACCESS_KEY=minioadmin
+      - S3_BUCKET_NAME=dify-files
+    depends_on:
+      - postgres
+      - redis
+      - meilisearch
+      - minio
+
+  web:
+    image: langgenius/dify-web:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: dify
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    restart: always
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.5
+    environment:
+      - MEILI_NO_ANALYTICS=true
+    volumes:
+      - meili_data:/meili_data
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  pgdata:
+  meili_data:
+  minio_data:
